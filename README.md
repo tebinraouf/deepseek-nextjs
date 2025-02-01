@@ -45,7 +45,7 @@ pnpm run dev
 
 ## Environment Variables
 
-Change the `.env.local` file with the following variables:
+Update the `.env` file with the following variables:
 
 - `DEEPSEEK_BASE_URL`
 - `DEEPSEEK_API_KEY`
