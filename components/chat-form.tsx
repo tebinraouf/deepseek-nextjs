@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { AutoResizeTextarea } from "@/components/autoresize-textarea"
 import type React from "react"
-import { useMemo } from "react"
+import { useMemo, useEffect } from "react"
 import ReactMarkdown from "react-markdown"
 
 interface ProcessedMessage extends Message {
@@ -16,18 +16,27 @@ interface ProcessedMessage extends Message {
 }
 
 export function ChatForm({ className, ...props }: React.ComponentProps<"form">) {
-  const { messages, input, setInput, append, isLoading } = useChat({
+  const { messages, input, setInput, append, isLoading, error } = useChat({
     api: "/api/chat",
+    onError: (error) => {
+      console.error("Chat error:", error)
+    }
   })
+
+  useEffect(() => {
+    if (error) {
+      console.error("Chat error:", error)
+    }
+  }, [error])
 
   const processedMessages = useMemo(() => {
     return messages.map((message) => {
+      console.log("Processing message:", message)
+      
       if (message.role === "assistant") {
-        // Check if the message starts with a thinking tag
         const hasThinkingTag = message.content.startsWith('<think>')
         const thinkMatch = message.content.match(/<think>([\s\S]*?)<\/think>/)
         
-        // If there's a thinking tag but no response yet, show only thinking
         if (hasThinkingTag && !message.content.includes('</think>')) {
           return {
             ...message,
@@ -36,7 +45,6 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           }
         }
         
-        // Otherwise process normally
         const thinking = thinkMatch ? thinkMatch[1].trim() : ""
         const response = message.content.replace(/<think>[\s\S]*?<\/think>/, "").trim()
         return { ...message, thinking, response }
@@ -45,11 +53,18 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     })
   }, [messages])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (input.trim()) {
-      void append({ content: input, role: "user" })
-      setInput("")
+      try {
+        await append({
+          content: input,
+          role: "user"
+        })
+        setInput("")
+      } catch (err) {
+        console.error("Error sending message:", err)
+      }
     }
   }
 

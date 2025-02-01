@@ -8,15 +8,31 @@ const deepseek = createDeepSeek({
 })
 
 export async function POST(req: Request) {
-  const { messages }: { messages: CoreMessage[] } = await req.json()
+  try {
+    // Validate request body
+    const { messages }: { messages: CoreMessage[] } = await req.json()
+    
+    if (!messages || !Array.isArray(messages)) {
+      return new Response("Invalid messages format", { status: 400 })
+    }
 
-  const result = streamText({
-    model: deepseek("deepseek-r1-distill-llama-70b"),
-    messages,
-    system:
-      "You are a helpful AI assistant. Before providing an answer, think through your response and wrap your thinking process in <think> tags. Then provide your final answer after the closing </think> tag.",
-  })
+    // Validate environment variables
+    if (!process.env.DEEPSEEK_BASE_URL || !process.env.DEEPSEEK_API_KEY) {
+      console.error("Missing DeepSeek configuration")
+      return new Response("Server configuration error", { status: 500 })
+    }
 
-  return result.toDataStreamResponse()
+    const result = streamText({
+      model: deepseek("deepseek-r1-distill-llama-70b"),
+      messages,
+      system:
+        "You are a helpful AI assistant. Before providing an answer, think through your response and wrap your thinking process in <think> tags. Then provide your final answer after the closing </think> tag.",
+    })
+
+    return result.toDataStreamResponse()
+  } catch (error) {
+    console.error("Chat API error:", error)
+    return new Response("Internal server error", { status: 500 })
+  }
 }
 
